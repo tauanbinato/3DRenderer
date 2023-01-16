@@ -19,7 +19,7 @@ bool is_running = false;
 int previous_frame_time = 0;
 
 vec3_t camera_position = { .x = 0, .y = 0, .z = -5 };
-float fov_factor = 640;
+float fov_factor = 200;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Setup function to initialize variables and game objects

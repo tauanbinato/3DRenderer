@@ -54,9 +54,11 @@ void load_cube_mesh_data(void) {
 
 void load_obj_file_data(char* filename) {
     FILE* file;
+    // Read mode r
     file = fopen(filename, "r");
     char line[1024];
 
+    // Reads line by line
     while (fgets(line, 1024, file)) {
         // Vertex information
         if (strncmp(line, "v ", 2) == 0) {
