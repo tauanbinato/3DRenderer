@@ -18,8 +18,8 @@ triangle_t* triangles_to_render = NULL;
 bool is_running = false;
 int previous_frame_time = 0;
 
-vec3_t camera_position = { .x = 0, .y = 0, .z = -5 };
-float fov_factor = 200;
+vec3_t camera_position = { .x = 0, .y = 0, .z = 0 };
+float fov_factor = 640;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Setup function to initialize variables and game objects
@@ -39,7 +39,7 @@ void setup(void) {
 
     // Loads the vertex and face values for the mesh data structure
     // load_cube_mesh_data();
-    load_obj_file_data("./assets/f22.obj");
+    load_obj_file_data("./assets/cube.obj");
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -101,7 +101,7 @@ void update(void) {
         face_vertices[1] = mesh.vertices[mesh_face.b - 1];
         face_vertices[2] = mesh.vertices[mesh_face.c - 1];
 
-        triangle_t projected_triangle;
+        vec3_t transformed_vertices[3];
 
         // Loop all three vertices of this current face and apply transformations
         for (int j = 0; j < 3; j++) {
@@ -112,10 +112,44 @@ void update(void) {
             transformed_vertex = vec3_rotate_z(transformed_vertex, mesh.rotation.z);
 
             // Translate the vertex away from the camera
-            transformed_vertex.z -= camera_position.z;
+            transformed_vertex.z += 5;
 
+            // Save transformed vertex in the array of transformed vertices
+            transformed_vertices[j] = transformed_vertex;
+        }
+
+        // Check backface culling
+        vec3_t vector_a = transformed_vertices[0]; /*   A   */
+        vec3_t vector_b = transformed_vertices[1]; /*  / \  */
+        vec3_t vector_c = transformed_vertices[2]; /* C---B */
+
+        // Get the vector subtraction of B-A and C-A
+        vec3_t vector_ab = vec3_sub(vector_b, vector_a);
+        vec3_t vector_ac = vec3_sub(vector_c, vector_a);
+        vec3_normalize(&vector_ab);
+        vec3_normalize(&vector_ac);
+
+        // Compute the face normal (using cross product to find perpendicular)
+        vec3_t normal = vec3_cross(vector_ab, vector_ac);
+        vec3_normalize(&normal);
+
+        // Find the vector between vertex A in the triangle and the camera origin
+        vec3_t camera_ray = vec3_sub(camera_position, vector_a);
+
+        // Calculate how aligned the camera ray is with the face normal (using dot product)
+        float dot_normal_camera = vec3_dot(normal, camera_ray);
+
+        // Bypass the triangles that are looking away from the camera
+        if (dot_normal_camera < 0) {
+            continue;
+        }
+
+        triangle_t projected_triangle;
+
+        // Loop all three vertices to perform projection
+        for (int j = 0; j < 3; j++) {
             // Project the current vertex
-            vec2_t projected_point = project(transformed_vertex);
+            vec2_t projected_point = project(transformed_vertices[j]);
 
             // Scale and translate the projected points to the middle of the screen
             projected_point.x += (window_width / 2);
@@ -140,17 +174,20 @@ void render(void) {
     for (int i = 0; i < num_triangles; i++) {
         triangle_t triangle = triangles_to_render[i];
 
-        // Draw vertex points
-        draw_rect(triangle.points[0].x, triangle.points[0].y, 3, 3, 0xFFFFFF00); // vertex A
-        draw_rect(triangle.points[1].x, triangle.points[1].y, 3, 3, 0xFFFFFF00); // vertex B
-        draw_rect(triangle.points[2].x, triangle.points[2].y, 3, 3, 0xFFFFFF00); // vertex C
+        // Draw filled triangle
+        draw_filled_triangle(
+            triangle.points[0].x, triangle.points[0].y, // vertex A
+            triangle.points[1].x, triangle.points[1].y, // vertex B
+            triangle.points[2].x, triangle.points[2].y, // vertex C
+            0xFFFFFFFF
+        );
 
         // Draw unfilled triangle
         draw_triangle(
             triangle.points[0].x, triangle.points[0].y, // vertex A
             triangle.points[1].x, triangle.points[1].y, // vertex B
             triangle.points[2].x, triangle.points[2].y, // vertex C
-            0xFF00FF00
+            0xFF000000
         );
     }
 
